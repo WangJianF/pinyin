@@ -12,6 +12,7 @@ __all__ = ['get', 'get_pinyin', 'get_initial']
 # init pinyin dict
 pinyin_dict = {}
 pinyin_tone = {}
+needUpper = False
 dat = os.path.join(os.path.dirname(__file__), "Mandarin.dat")
 with open(dat) as f:
     for line in f:
@@ -25,13 +26,19 @@ def _pinyin_generator(chars, format):
     itself will be returned.
     Chars must be unicode list.
     """
+    global needUpper
     for char in chars:
         key = "%X" % ord(char)
         pinyin = pinyin_dict.get(key, char)
         tone = pinyin_tone.get(key, 0)
 
         if tone == 0 or format == "strip":
-            pass
+            
+            if needUpper:
+                pinyin = pinyin.capitalize()
+            else:
+                needUpper = True
+            # pass
         elif format == "numerical":
             pinyin += str(tone)
         elif format == "diacritical":
@@ -43,13 +50,18 @@ def _pinyin_generator(chars, format):
         else:
             error = "Format must be one of: numerical/diacritical/strip"
             raise ValueError(error)
-
         yield unicodedata.normalize('NFC', pinyin)
 
 
 def get(s, delimiter='', format="diacritical"):
     """Return pinyin of string, the string must be unicode
     """
+    s = s.replace('-', '_')
+    s = s.replace(' ', '')
+    s = s.replace('\t', '')
+    s = s.replace('：', '')
+    global needUpper
+    needUpper = False
     return delimiter.join(_pinyin_generator(u(s), format=format))
 
 
@@ -65,6 +77,6 @@ def get_initial(s, delimiter=' '):
     """Return the 1st char of pinyin of string, the string must be unicode
     """
     initials = (p[0] for p in _pinyin_generator(u(s), format="strip"))
-    return delimiter.join(initials)
+    return delimiter.join(initials).lower()
 
 tonemarks = ["", u("̄"), u("́"), u("̌"), u("̀"), ""]
